@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Energy Calculator 2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Building Energy Calculator 2.0</h1>
+        
+        <div class="space-y-6">
+            <!-- Building Input Form -->
+            <div class="building-input">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Building Details</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Building Name</label>
+                        <input type="text" id="buildingName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Enter building name">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Square Footage</label>
+                            <input type="number" id="squareFootage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Enter square footage">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Annual kBTU</label>
+                            <input type="number" id="kbtu" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="Enter annual kBTU">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Building Type</label>
+                        <select id="buildingType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option value="">Select building type</option>
+                            <option value="office">Office</option>
+                            <option value="retail">Retail</option>
+                            <option value="hospital">Hospital</option>
+                            <option value="school">School</option>
+                            <option value="residential">Residential</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4">
+                <button onclick="calculateEUI()" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                    Calculate EUI
+                </button>
+                <button onclick="addToComparison()" class="flex-1 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">
+                    Add to Comparison
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden space-y-4 p-4 bg-gray-50 rounded-md">
+                <h3 class="text-xl font-semibold text-gray-700">Results</h3>
+                <div class="space-y-2">
+                    <p>Building: <span id="resultBuildingName" class="font-medium"></span></p>
+                    <p>Building Type: <span id="resultBuildingType" class="font-medium"></span></p>
+                    <p>Square Footage: <span id="resultSquareFootage" class="font-medium"></span></p>
+                    <p>Annual kBTU: <span id="resultKBTU" class="font-medium"></span></p>
+                    <p>Energy Use Intensity (EUI): <span id="resultEUI" class="font-medium text-green-600"></span> kBTU/ft²/year</p>
+                    <div id="benchmarkResult" class="mt-4 p-3 rounded-md"></div>
+                </div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div id="comparisonTable" class="hidden">
+                <h3 class="text-xl font-semibold mb-4 text-gray-700">Building Comparison</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Square Footage</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Annual kBTU</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EUI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparisonTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Benchmark values for different building types (kBTU/ft²/year)
+        const benchmarks = {
+            office: { low: 30, medium: 80, high: 130 },
+            retail: { low: 40, medium: 90, high: 140 },
+            hospital: { low: 150, medium: 250, high: 350 },
+            school: { low: 35, medium: 75, high: 115 },
+            residential: { low: 25, medium: 60, high: 95 }
+        };
+
+        let comparisonData = [];
+
+        function calculateEUI() {
+            // Get input values
+            const buildingName = document.getElementById('buildingName').value;
+            const squareFootage = parseFloat(document.getElementById('squareFootage').value);
+            const kbtu = parseFloat(document.getElementById('kbtu').value);
+            const buildingType = document.getElementById('buildingType').value;
+
+            // Validate inputs
+            if (!buildingName || isNaN(squareFootage) || isNaN(kbtu)) {
+                alert('Please fill in all fields with valid values');
+                return;
+            }
+
+            // Calculate EUI
+            const eui = kbtu / squareFootage;
+
+            // Display results
+            document.getElementById('resultBuildingName').textContent = buildingName;
+            document.getElementById('resultBuildingType').textContent = buildingType || 'Not specified';
+            document.getElementById('resultSquareFootage').textContent = squareFootage.toLocaleString();
+            document.getElementById('resultKBTU').textContent = kbtu.toLocaleString();
+            document.getElementById('resultEUI').textContent = eui.toFixed(2);
+
+            // Show benchmark comparison if building type is selected
+            if (buildingType && benchmarks[buildingType]) {
+                const benchmark = benchmarks[buildingType];
+                let benchmarkMessage = '';
+                let benchmarkClass = '';
+
+                if (eui < benchmark.low) {
+                    benchmarkMessage = 'Excellent! EUI is below typical range for this building type.';
+                    benchmarkClass = 'bg-green-100 text-green-800';
+                } else if (eui < benchmark.medium) {
+                    benchmarkMessage = 'Good. EUI is within the lower range for this building type.';
+                    benchmarkClass = 'bg-green-50 text-green-700';
+                } else if (eui < benchmark.high) {
+                    benchmarkMessage = 'Fair. EUI is within the higher range for this building type.';
+                    benchmarkClass = 'bg-yellow-50 text-yellow-700';
+                } else {
+                    benchmarkMessage = 'High energy usage. Consider energy efficiency improvements.';
+                    benchmarkClass = 'bg-red-50 text-red-700';
+                }
+
+                document.getElementById('benchmarkResult').className = `mt-4 p-3 rounded-md ${benchmarkClass}`;
+                document.getElementById('benchmarkResult').textContent = benchmarkMessage;
+            } else {
+                document.getElementById('benchmarkResult').className = 'hidden';
+            }
+
+            // Show results section
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function addToComparison() {
+            const buildingName = document.getElementById('buildingName').value;
+            const squareFootage = parseFloat(document.getElementById('squareFootage').value);
+            const kbtu = parseFloat(document.getElementById('kbtu').value);
+            const buildingType = document.getElementById('buildingType').value;
+
+            if (!buildingName || isNaN(squareFootage) || isNaN(kbtu)) {
+                alert('Please fill in all fields with valid values');
+                return;
+            }
+
+            const eui = kbtu / squareFootage;
+
+            comparisonData.push({
+                name: buildingName,
+                type: buildingType || 'Not specified',
+                squareFootage: squareFootage,
+                kbtu: kbtu,
+                eui: eui
+            });
+
+            updateComparisonTable();
+            clearForm();
+        }
+
+        function updateComparisonTable() {
+            const tableBody = document.getElementById('comparisonTableBody');
+            tableBody.innerHTML = '';
+
+            comparisonData.forEach(building => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">${building.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${building.type}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${building.squareFootage.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${building.kbtu.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${building.eui.toFixed(2)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('comparisonTable').classList.remove('hidden');
+        }
+
+        function clearForm() {
+            document.getElementById('buildingName').value = '';
+            document.getElementById('squareFootage').value = '';
+            document.getElementById('kbtu').value = '';
+            document.getElementById('buildingType').value = '';
+            document.getElementById('results').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
